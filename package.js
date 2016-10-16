@@ -1,6 +1,6 @@
 Package.describe({
     name: 'leaf4monkey:mongo-helpers',
-    version: '0.0.2',
+    version: '0.0.3',
     // Brief, one-line summary of the package.
     summary: 'Some helpful APIs for mongodb.',
     // URL to the Git repository containing the source code for this package.
@@ -11,13 +11,26 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
-    api.versionsFrom('1.2.1');
+    api.versionsFrom('1.4.1');
     api.use([
         'ecmascript',
         'mongo',
         'check',
         'underscore'
     ]);
-    api.addFiles('mongo-helpers.js');
-    api.export('MongoHelpers');
+    api.mainModule('mongo-helpers.js');
+});
+
+Package.onTest(function(api) {
+    api.use('leaf4monkey:mongo-helpers');
+
+    api.use([
+        'ecmascript',
+        'mongo',
+        'check',
+        'underscore',
+        'practicalmeteor:mocha'
+    ]);
+
+    api.mainModule('mongo-helpers-tests.js');
 });
