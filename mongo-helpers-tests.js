@@ -17,14 +17,95 @@ describe('MongoHelpers', function () {
 
     it('#flatten()，可以将对象扁平化，使其适用于mongo更新操作：', function () {
         let date = new Date();
-        let flatten = MongoHelpers.flatten({a: {b: [{aa: {0: 1, 1: 1, ccc: 1}, bb: 1}, {cc: date}]}});
-        chai.assert.deepEqual(flatten, {'a.b.0.aa.0': 1, 'a.b.0.aa.1': 1, 'a.b.0.aa.ccc': 1, 'a.b.0.bb': 1, 'a.b.1.cc': date});
+        let flatten = MongoHelpers.flatten({
+            a: {
+                b: [
+                    {
+                        aa: {
+                            0: 1,
+                            1: 1,
+                            ccc: 1
+                        },
+                        bb: 1
+                    }, {cc: date}
+                ]
+            }
+        });
+        chai.assert.deepEqual(flatten,
+            {
+                'a.b.0.aa.0': 1,
+                'a.b.0.aa.1': 1,
+                'a.b.0.aa.ccc': 1,
+                'a.b.0.bb': 1,
+                'a.b.1.cc': date
+            });
     });
 
     it('#rebuild()，可以将扁平化处理后的对象重建还原：', function () {
         let date = new Date();
-        let obj = MongoHelpers.rebuild({'a.b.0.aa.0': 1, 'a.b.0.aa.1': 1, 'a.b.0.aa.ccc': 1, 'a.b.0.bb': 1, 'a.b.1.cc': date});
-        chai.assert.deepEqual(obj, {a: {b: [{aa: {0: 1, 1: 1, ccc: 1}, bb: 1}, {cc: date}]}});
+        let obj = MongoHelpers.rebuild({
+            'a.b.0.aa.0': 1,
+            'a.b.0.aa.1': 1,
+            'a.b.0.aa.ccc': 1,
+            'a.b.0.bb': 1,
+            'a.b.1.cc': date
+        });
+        chai.assert.deepEqual(obj,
+            {
+                a: {
+                    b: [
+                        {
+                            aa: {
+                                0: 1,
+                                1: 1,
+                                ccc: 1
+                            },
+                            bb: 1
+                        }, {cc: date}
+                    ]
+                }
+            });
+    });
+
+    it('#diffToFlatten()，对比传入的对象，取得差异部分：', function () {
+        let date = new Date();
+        let diff = MongoHelpers.diffToFlatten(
+            {
+                a: {
+                    b: [
+                        {
+                            aa: {
+                                0: 1,
+                                1: 1,
+                                2: null,
+                                ccc: 1
+                            },
+                            bb: 1
+                        },
+                        {cc: date}
+                    ]
+                }
+            },
+            {
+                a: {
+                    b: {
+                        0: {
+                            aa: {
+                                0: 1,
+                                1: 1,
+                                2: 1,
+                                ccc: 1
+                            }
+                        },
+                        1: {cc: date}
+                    }
+                }
+            }
+        );
+        chai.assert.deepEqual({
+            "a.b.0.bb": 1,
+            "a.b.0.aa.2": null
+        }, diff);
     });
 
     it('#flattenToModifier()，对比传入的对象，取得差异部分来组建mongo更新操作中的setter和unsetter部分：', function () {
@@ -62,6 +143,9 @@ describe('MongoHelpers', function () {
                 }
             }
         );
-        chai.assert.deepEqual({"$set":{"a.b.0.bb":1},"$unset":{"a.b.0.aa.2":1}}, modifier);
+        chai.assert.deepEqual({
+            "$set": {"a.b.0.bb": 1},
+            "$unset": {"a.b.0.aa.2": 1}
+        }, modifier);
     });
 });

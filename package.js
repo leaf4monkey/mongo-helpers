@@ -1,6 +1,6 @@
 Package.describe({
     name: 'leaf4monkey:mongo-helpers',
-    version: '0.1.0',
+    version: '0.1.1',
     // Brief, one-line summary of the package.
     summary: 'Some helpful APIs for mongodb.',
     // URL to the Git repository containing the source code for this package.

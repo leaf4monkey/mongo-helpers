@@ -82,6 +82,40 @@ let MongoHelpers = {
         });
         return copy;
     },
+    diffObj (base, mirror, callback) {
+        let self = this;
+        base = self.flatten(base);
+        mirror = mirror && self.flatten(mirror);
+
+        _.each(base, (val, key) => {
+            if ([null, undefined].indexOf(val) >= 0) {
+                callback({key, val, op: 'unset'});
+            } else if (!mirror || !_.isEqual(mirror[key], val)) {
+                callback({key, val, op: 'set'});
+            }
+        });
+    },
+    /**
+     * 将传入的文档扁平化后，对比键值对，获得两个对象的差异部分
+     * @param base
+     * @param mirror
+     * @returns {{}}
+     */
+    diffToFlatten (base, mirror) {
+        let self = this,
+            count = 0,
+            res = {};
+
+        self.diffObj(base, mirror, ({key, val}) => {
+            res[key] = val;
+            count++;
+        });
+
+        if (!count) {
+            return;
+        }
+        return res;
+    },
     /**
      * 将传入的文档扁平化后，对比键值对，获得modifier(包含$set和$unset)
      * @param base
@@ -96,15 +130,12 @@ let MongoHelpers = {
             unsetterCount = 0,
             res = {};
 
-        base = self.flatten(base);
-        mirror = mirror && self.flatten(mirror);
-
-        _.each(base, function (v, k) {
-            if (!v) {
-                unsetter[k] = 1;
+        self.diffObj(base, mirror, ({key, val, op}) => {
+            if (op === 'unset') {
+                unsetter[key] = 1;
                 unsetterCount++;
-            } else if (!mirror || !_.isEqual(mirror[k], v)) {
-                setter[k] = v;
+            } else {
+                setter[key] = val;
                 setterCount++;
             }
         });
