@@ -194,7 +194,7 @@ let MongoHelpers = {
             count = 0,
             modifier = {};
 
-        unsetAs = !mirror || unsetAs;
+        unsetAs = unsetAs || !mirror;
 
         self[mirror ? 'diffObject' : 'diffObj'](base, mirror, {falsy}, ({key, val, oldVal, op}) => {
             op = '$' + op;
