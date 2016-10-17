@@ -84,8 +84,9 @@ let MongoHelpers = {
     },
     diffObj (base, mirror, falsy, callback) {
         let self = this;
+        let keys = _.keys(base);
         base = self.flatten(base);
-        mirror = mirror && self.flatten(mirror);
+        mirror = mirror && self.flatten(_.pick(mirror, keys));
         if (_.isFunction(falsy)) {
             [callback, falsy] = [falsy, null];
         }
@@ -98,6 +99,65 @@ let MongoHelpers = {
                 callback({key, val, op: 'set'});
             }
         });
+
+        mirror && _.each(mirror, (val, key) => {
+            if (falsy.indexOf(base[key]) >= 0) {
+                callback({key, val, op: 'unset'});
+            }
+        });
+    },
+    diffObject (base, mirror, falsy, callback) {
+        let isNotSimpleArray = function (val) {
+            return !_.isArray(val) || !Match.test(val, [Match.OneOf(String, Number, Date, Boolean, null, undefined)]);
+        };
+        let isObject = function (val) {
+            return val && _.isObject(val) && !_.isDate(val) && isNotSimpleArray(val);
+        };
+        let isFalsy = function (val) {
+            return _.contains(falsy, val);
+        };
+        let traverse = function (obj, mir, parents, handle) {
+            if (!obj) {
+                return;
+            }
+            parents = parents || [];
+            obj && _.each(obj, (val, key) => {
+                let paths = parents.concat([key]);
+                let ov = mir && mir[key];
+                if (_.isEqual(val, ov)) {
+                    return;
+                }
+                if (isObject(val) && isObject(ov)) {
+                    return traverse(val, ov, paths, handle);
+                }
+                handle(val, ov, key, paths, {obj, mir});
+            });
+        };
+
+        if (_.isFunction(falsy)) {
+            [callback, falsy] = [falsy, null];
+        }
+        falsy = falsy || [null, undefined];
+
+        let keys = _.keys(base);
+        mirror = mirror && _.pick(mirror, keys);
+        traverse(base, mirror, null, (val, mv, key, paths) =>
+            callback({
+                key: paths.join('.'),
+                val,
+                oldVal: mv,
+                op: isFalsy(val) ? 'unset' : 'set'
+            })
+        );
+        traverse(mirror, base, null, (val, bv, key, paths, {mir}) =>
+            !mir.hasOwnProperty(key) &&
+            callback({
+                key: paths.join('.'),
+                val: bv,
+                oldVal: val,
+                op: 'unset'
+            })
+        );
     },
     /**
      * 将传入的文档扁平化后，对比键值对，获得两个对象的差异部分
@@ -111,7 +171,7 @@ let MongoHelpers = {
             count = 0,
             res = {};
 
-        self.diffObj(base, mirror, falsy, ({key, val}) => {
+        self.diffObject(base, mirror, falsy, ({key, val}) => {
             res[key] = val;
             count++;
         });
@@ -136,7 +196,7 @@ let MongoHelpers = {
             unsetterCount = 0,
             res = {};
 
-        self.diffObj(base, mirror, falsy, ({key, val, op}) => {
+        self.diffObject(base, mirror, falsy, ({key, val, op}) => {
             if (op === 'unset') {
                 unsetter[key] = 1;
                 unsetterCount++;
