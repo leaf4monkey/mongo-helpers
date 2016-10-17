@@ -196,7 +196,7 @@ let MongoHelpers = {
             unsetterCount = 0,
             res = {};
 
-        self.diffObject(base, mirror, falsy, ({key, val, op}) => {
+        self[mirror ? 'diffObject' : 'diffObj'](base, mirror, falsy, ({key, val, op}) => {
             if (op === 'unset') {
                 unsetter[key] = 1;
                 unsetterCount++;
