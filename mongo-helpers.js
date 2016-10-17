@@ -82,7 +82,7 @@ let MongoHelpers = {
         });
         return copy;
     },
-    diffObj (base, mirror, falsy, callback) {
+    diffObj (base, mirror, {falsy}, callback) {
         let self = this;
         let keys = _.keys(base);
         base = self.flatten(base);
@@ -106,7 +106,7 @@ let MongoHelpers = {
             }
         });
     },
-    diffObject (base, mirror, falsy, callback) {
+    diffObject (base, mirror, {falsy}, callback) {
         let isNotSimpleArray = function (val) {
             return !_.isArray(val) || !Match.test(val, [Match.OneOf(String, Number, Date, Boolean, null, undefined)]);
         };
@@ -141,12 +141,12 @@ let MongoHelpers = {
 
         let keys = _.keys(base);
         mirror = mirror && _.pick(mirror, keys);
-        traverse(base, mirror, null, (val, mv, key, paths) =>
+        traverse(base, mirror, null, (val, mv, key, paths, {obj, mir}) =>
             callback({
                 key: paths.join('.'),
                 val,
                 oldVal: mv,
-                op: isFalsy(val) ? 'unset' : 'set'
+                op: isFalsy(val) ? (_.isArray(mir) ? 'pull' : 'unset') : 'set'
             })
         );
         traverse(mirror, base, null, (val, bv, key, paths, {mir}) =>
@@ -155,7 +155,7 @@ let MongoHelpers = {
                 key: paths.join('.'),
                 val: bv,
                 oldVal: val,
-                op: 'unset'
+                op: _.isArray(mir) ? 'pull' : 'unset'
             })
         );
     },
@@ -166,7 +166,7 @@ let MongoHelpers = {
      * @param falsy
      * @returns {{}}
      */
-    diffToFlatten (base, mirror, falsy) {
+    diffToFlatten (base, mirror, {falsy}) {
         let self = this,
             count = 0,
             res = {};
@@ -186,35 +186,32 @@ let MongoHelpers = {
      * @param base
      * @param mirror
      * @param falsy
+     * @param unsetAs1
      * @returns {{}}
      */
-    flattenToModifier (base, mirror, falsy) {
+    flattenToModifier (base, mirror, {falsy, unsetAs1}) {
         let self = this,
-            setter = {},
-            unsetter = {},
-            setterCount = 0,
-            unsetterCount = 0,
-            res = {};
+            count = 0,
+            modifier = {};
 
         self[mirror ? 'diffObject' : 'diffObj'](base, mirror, falsy, ({key, val, op}) => {
-            if (op === 'unset') {
-                unsetter[key] = 1;
-                unsetterCount++;
-            } else {
-                setter[key] = val;
-                setterCount++;
+            op = '$' + op;
+            let m = modifier[op] = modifier[op] || {};
+            m[key] = val;
+            if (op === '$unset') {
+                if (val === undefined) {
+                    m[key] = '';
+                } else if (unsetAs1) {
+                    m[key] = 1;
+                }
             }
+            count++;
         });
-        if (setterCount) {
-            res.$set = setter;
-        }
-        if (unsetterCount) {
-            res.$unset = unsetter;
-        }
-        if (!setterCount && !unsetterCount) {
+
+        if (!count) {
             return;
         }
-        return res;
+        return modifier;
     },
     multiUpdate (collection, selector, modifier, multi, isDone) {
         let count = 0;
