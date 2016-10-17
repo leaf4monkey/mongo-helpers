@@ -82,13 +82,17 @@ let MongoHelpers = {
         });
         return copy;
     },
-    diffObj (base, mirror, callback) {
+    diffObj (base, mirror, falsy, callback) {
         let self = this;
         base = self.flatten(base);
         mirror = mirror && self.flatten(mirror);
+        if (_.isFunction(falsy)) {
+            [callback, falsy] = [falsy, null];
+        }
+        falsy = falsy || [null, undefined];
 
         _.each(base, (val, key) => {
-            if ([null, undefined].indexOf(val) >= 0) {
+            if (falsy.indexOf(val) >= 0) {
                 callback({key, val, op: 'unset'});
             } else if (!mirror || !_.isEqual(mirror[key], val)) {
                 callback({key, val, op: 'set'});
@@ -99,14 +103,15 @@ let MongoHelpers = {
      * 将传入的文档扁平化后，对比键值对，获得两个对象的差异部分
      * @param base
      * @param mirror
+     * @param falsy
      * @returns {{}}
      */
-    diffToFlatten (base, mirror) {
+    diffToFlatten (base, mirror, falsy) {
         let self = this,
             count = 0,
             res = {};
 
-        self.diffObj(base, mirror, ({key, val}) => {
+        self.diffObj(base, mirror, falsy, ({key, val}) => {
             res[key] = val;
             count++;
         });
@@ -120,9 +125,10 @@ let MongoHelpers = {
      * 将传入的文档扁平化后，对比键值对，获得modifier(包含$set和$unset)
      * @param base
      * @param mirror
+     * @param falsy
      * @returns {{}}
      */
-    flattenToModifier (base, mirror) {
+    flattenToModifier (base, mirror, falsy) {
         let self = this,
             setter = {},
             unsetter = {},
@@ -130,7 +136,7 @@ let MongoHelpers = {
             unsetterCount = 0,
             res = {};
 
-        self.diffObj(base, mirror, ({key, val, op}) => {
+        self.diffObj(base, mirror, falsy, ({key, val, op}) => {
             if (op === 'unset') {
                 unsetter[key] = 1;
                 unsetterCount++;

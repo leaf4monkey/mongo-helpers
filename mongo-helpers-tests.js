@@ -121,7 +121,8 @@ describe('MongoHelpers', function () {
                                 2: null,
                                 ccc: 1
                             },
-                            bb: 1
+                            bb: 1,
+                            cc: [undefined, null, 1, '', date, true, false]
                         },
                         {cc: date}
                     ]
@@ -138,13 +139,17 @@ describe('MongoHelpers', function () {
                                 ccc: 1
                             }
                         },
-                        1: {cc: date}
+                        1: {cc: date},
+                        cc: [undefined, null, 1, '', date, true]
                     }
                 }
             }
         );
         chai.assert.deepEqual({
-            "$set": {"a.b.0.bb": 1},
+            "$set": {
+                "a.b.0.bb": 1,
+                "a.b.0.cc": [undefined, null, 1, '', date, true, false]
+            },
             "$unset": {"a.b.0.aa.2": 1}
         }, modifier);
     });
