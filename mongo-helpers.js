@@ -82,7 +82,7 @@ let MongoHelpers = {
         });
         return copy;
     },
-    diffObj (base, mirror, {falsy} = {}, callback) {
+    diffObj (base, mirror, {falsy, unsetNonProp} = {}, callback) {
         let self = this;
         let keys = _.keys(base);
         base = self.flatten(base);
@@ -91,22 +91,33 @@ let MongoHelpers = {
             [callback, falsy] = [falsy, null];
         }
         falsy = falsy || [null, undefined];
+        let isFalsy = function (val) {
+            return _.contains(falsy, val);
+        };
 
         _.each(base, (val, key) => {
-            if (falsy.indexOf(val) >= 0) {
+            if (isFalsy(val)) {
                 callback({key, val, op: 'unset'});
             } else if (!mirror || !_.isEqual(mirror[key], val)) {
                 callback({key, val, op: 'set'});
             }
         });
 
-        mirror && _.each(mirror, (val, key) => {
-            if (falsy.indexOf(base[key]) >= 0) {
+        unsetNonProp && mirror && _.each(mirror, (val, key) => {
+            if (!base.hasOwnProperty(key) && isFalsy(val)) {
                 callback({key, val, op: 'unset'});
             }
         });
     },
-    diffObject (base, mirror, {falsy} = {}, callback) {
+    /**
+     * 对比两个对象，并获得差异部分，将其按取值分别分配到unset和set集中
+     * @param base {Object}
+     * @param mirror {Object}
+     * @param falsy {Array.<any>}
+     * @param unsetNonProp {boolean} 是否base中未包含的属性加入至unset集
+     * @param callback
+     */
+    diffObject (base, mirror, {falsy, unsetNonProp} = {}, callback) {
         let isNotSimpleArray = function (val) {
             return !_.isArray(val) || !Match.test(val, [Match.OneOf(String, Number, Date, Boolean, null, undefined)]);
         };
@@ -130,7 +141,9 @@ let MongoHelpers = {
                 if (isObject(val) && isObject(ov)) {
                     return traverse(val, ov, paths, handle);
                 }
-                handle(val, ov, key, paths, {obj, mir});
+                let objHasKey = obj.hasOwnProperty(key);
+                let mirHasKey = mir.hasOwnProperty(key);
+                handle(val, ov, key, paths, {obj, mir}, objHasKey, mirHasKey);
             });
         };
 
@@ -141,37 +154,41 @@ let MongoHelpers = {
 
         let keys = _.keys(base);
         mirror = mirror && _.pick(mirror, keys);
-        traverse(base, mirror, null, (val, mv, key, paths, {obj, mir}) =>
+        traverse(base, mirror, null, (val, mv, key, paths, {obj, mir}, objHasKey, mirHasKey) =>
             callback({
                 key: paths.join('.'),
                 val,
                 oldVal: mv,
-                op: isFalsy(val) ? 'unset' : 'set'
+                op: isFalsy(val) ? 'unset' : 'set',
+                objHasKey,
+                mirHasKey
             })
         );
-        traverse(mirror, base, null, (val, bv, key, paths, {mir}) =>
-            !mir.hasOwnProperty(key) &&
-            callback({
+        unsetNonProp && traverse(mirror, base, null, (val, bv, key, paths, {mir}, objHasKey, mirHasKey) =>
+            !mirHasKey && callback({
                 key: paths.join('.'),
                 val: bv,
                 oldVal: val,
-                op: 'unset'
+                op: 'unset',
+                objHasKey,
+                mirHasKey
             })
         );
     },
     /**
      * 将传入的文档扁平化后，对比键值对，获得两个对象的差异部分
-     * @param base
-     * @param mirror
-     * @param falsy
+     * @param base {Object}
+     * @param mirror {Object}
+     * @param falsy {Array.<any>}
+     * @param unsetNonProp {boolean} 是否base中未包含的属性加入至unset集
      * @returns {{}}
      */
-    diffToFlatten (base, mirror, {falsy} = {}) {
+    diffToFlatten (base, mirror, {falsy, unsetNonProp} = {}) {
         let self = this,
             count = 0,
             res = {};
 
-        self.diffObject(base, mirror, {falsy}, ({key, val}) => {
+        self.diffObject(base, mirror, {falsy, unsetNonProp}, ({key, val}) => {
             res[key] = val;
             count++;
         });
@@ -183,20 +200,21 @@ let MongoHelpers = {
     },
     /**
      * 将传入的文档扁平化后，对比键值对，获得modifier(包含$set和$unset)
-     * @param base
-     * @param mirror
-     * @param falsy
-     * @param unsetAs
+     * @param base {Object}
+     * @param mirror {Object} 镜像
+     * @param falsy {Array.<any>} 自定义的假值
+     * @param unsetNonProp {boolean} 是否base中未包含的属性加入至unset集
+     * @param unsetAs {any} 设置unset集中的键值
      * @returns {{}}
      */
-    flattenToModifier (base, mirror, {falsy, unsetAs} = {}) {
+    flattenToModifier (base, mirror, {falsy, unsetNonProp, unsetAs} = {}) {
         let self = this,
             count = 0,
             modifier = {};
 
         unsetAs = unsetAs || !mirror;
 
-        self[mirror ? 'diffObject' : 'diffObj'](base, mirror, {falsy}, ({key, val, oldVal, op}) => {
+        self[mirror ? 'diffObject' : 'diffObj'](base, mirror, {falsy, unsetNonProp}, ({key, val, oldVal, op}) => {
             op = '$' + op;
             let m = modifier[op] = modifier[op] || {};
             m[key] = val;

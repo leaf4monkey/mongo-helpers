@@ -78,7 +78,7 @@ describe('MongoHelpers', function () {
                                 0: 1,
                                 1: 1,
                                 2: null,
-                                ccc: 1
+                                ccc: undefined
                             },
                             bb: 1
                         },
@@ -94,17 +94,21 @@ describe('MongoHelpers', function () {
                                 0: 1,
                                 1: 1,
                                 2: 1,
-                                ccc: 1
+                                ccc: 1,
+                                ddd: 2
                             }
                         },
                         1: {cc: date}
                     }
                 }
-            }
+            },
+            {unsetNonProp: true}
         );
         chai.assert.deepEqual({
             "a.b.0.bb": 1,
-            "a.b.0.aa.2": null
+            "a.b.0.aa.2": null,
+            "a.b.0.aa.ccc": undefined,
+            "a.b.0.aa.ddd": undefined
         }, diff);
     });
 
@@ -145,7 +149,8 @@ describe('MongoHelpers', function () {
                     }
                 },
                 c: '2'
-            }
+            },
+            {unsetNonProp: true}
         );
         chai.assert.deepEqual({
             "$set": {
@@ -195,7 +200,7 @@ describe('MongoHelpers', function () {
                 },
                 c: '2'
             },
-            {unsetAs: 1}
+            {unsetAs: 1, unsetNonProp: true}
         );
         chai.assert.deepEqual({
             "$set": {
@@ -204,6 +209,58 @@ describe('MongoHelpers', function () {
                 "b": [1]
             },
             "$unset": {"a.b.0.aa.2": 1, 'a.b.cc': 1}
+        }, modifier);
+    });
+
+    it('#flattenToModifier()，可以选择忽略base对象中不存在的属性：', function () {
+        let date = new Date();
+        let modifier = MongoHelpers.flattenToModifier(
+            {
+                a: {
+                    b: [
+                        {
+                            aa: {
+                                0: 1,
+                                1: 1,
+                                2: null,
+                                ccc: 1
+                            },
+                            bb: 1,
+                            cc: [null, 1, '', date, true, false]
+                        },
+                        {cc: date}
+                    ]
+                },
+                b: [1],
+                d: {dd: 1}
+            },
+            {
+                a: {
+                    b: {
+                        0: {
+                            aa: {
+                                0: 1,
+                                1: 1,
+                                2: 1,
+                                ccc: 1
+                            }
+                        },
+                        1: {cc: date},
+                        cc: [null, 1, '', date, true]
+                    }
+                },
+                c: '2',
+                d: {dd: 1, ee: 2}
+            },
+            {unsetAs: 1}
+        );
+        chai.assert.deepEqual({
+            "$set": {
+                "a.b.0.bb": 1,
+                "a.b.0.cc": [null, 1, '', date, true, false],
+                "b": [1]
+            },
+            "$unset": {"a.b.0.aa.2": 1}
         }, modifier);
     });
 });
