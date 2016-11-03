@@ -2,6 +2,15 @@
 
     一些用于辅助mongodb数据和集合操作的API。
 
+### Installation
+
+`meteor add leaf4monkey:mongo-helpers`
+
+### Importing
+
+`import {MongoHelpers} from 'meteor/leaf4monkey:mongo-helpers';`
+或：
+`const MongoHelpers = require('meteor/leaf4monkey:mongo-helpers').MongoHelpers;`
 
 ## APIs
 
