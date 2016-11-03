@@ -82,6 +82,16 @@ let MongoHelpers = {
         });
         return copy;
     },
+    /**
+     * 对比两个对象，并获得差异部分，将其按取值分别分配到unset和set集中，
+     * 这个方法是 `MongoHelpers.diffObject()` 的简单版本，
+     * 会先将传入的对象扁平化后再进行键值对比
+     * @param base {Object}
+     * @param mirror {Object}
+     * @param falsy {Array.<any>}
+     * @param unsetNonProp {boolean} 是否base中未包含的属性加入至unset集
+     * @param callback {Function} 差异部分处理回调
+     */
     diffObj (base, mirror, {falsy, unsetNonProp} = {}, callback) {
         let self = this;
         let keys = _.keys(base);
@@ -115,7 +125,7 @@ let MongoHelpers = {
      * @param mirror {Object}
      * @param falsy {Array.<any>}
      * @param unsetNonProp {boolean} 是否base中未包含的属性加入至unset集
-     * @param callback
+     * @param callback {Function} 差异部分处理回调
      */
     diffObject (base, mirror, {falsy, unsetNonProp} = {}, callback) {
         let isNotSimpleArray = function (val) {

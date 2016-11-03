@@ -37,3 +37,6 @@ o = JSON.stringify(MongoHelpers.flatten(o)); // '{"a.b.0.aa":1,"a.b.0.bb":"2016-
         `options.unsetAs {any} `: 统一设置 unsetter 中的键值，建议按照习惯设置为 `1` 或 `true`，如果传入的 `mirror` 参数为 `null`，则强制设置为 `true`，否则默认被设置为 `base` 对象中的值。
 
     
+### `MongoHelpers.diffToFlatten (base, mirror, options):`
+
+将传入的文档扁平化后，对比键值对，获得两个对象的差异部分，仅在 `mirror` 中存在的值将在返回的结果中被设置为 `undefined`。参数列表与 `MongoHelpers.flattenToModifier (base, mirror, options)` 一致，但不可设置 `options.unsetAs`。
