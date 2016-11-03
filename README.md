@@ -2,11 +2,11 @@
 
     一些用于辅助mongodb数据和集合操作的API。
 
-### Installation
+## Installation
 
 `meteor add leaf4monkey:mongo-helpers`
 
-### Importing
+## Importing
 
 `import {MongoHelpers} from 'meteor/leaf4monkey:mongo-helpers';`
 
