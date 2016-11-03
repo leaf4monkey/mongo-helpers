@@ -9,7 +9,9 @@
 ### Importing
 
 `import {MongoHelpers} from 'meteor/leaf4monkey:mongo-helpers';`
+
 或：
+
 `const MongoHelpers = require('meteor/leaf4monkey:mongo-helpers').MongoHelpers;`
 
 ## APIs
