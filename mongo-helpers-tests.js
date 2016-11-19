@@ -9,49 +9,16 @@ import {Mongo} from 'meteor/mongo';
 import {MongoHelpers} from 'meteor/leaf4monkey:mongo-helpers';
 
 let Coll = new Mongo.Collection('clothes');
-describe('MongoHelpers', function () {
-    it('#getCollectionByName()，可以通过集合名获取任意的自定义集合：', function () {
-        let _Coll = MongoHelpers.getCollectionByName(Coll._name);
-        chai.assert.equal(_Coll._name || _Coll.name, Coll._name);
-    });
-
-    it('#flatten()，可以将对象扁平化，使其适用于mongo更新操作：', function () {
-        let date = new Date();
-        let flatten = MongoHelpers.flatten({
-            a: {
-                b: [
-                    {
-                        aa: {
-                            0: 1,
-                            1: 1,
-                            ccc: 1
-                        },
-                        bb: 1
-                    }, {cc: date}
-                ]
-            }
+describe('mongo-helpers', function () {
+    describe('MongoHelpers', function () {
+        it('#getCollectionByName()，可以通过集合名获取任意的自定义集合：', function () {
+            let _Coll = MongoHelpers.getCollectionByName(Coll._name);
+            chai.assert.equal(_Coll._name || _Coll.name, Coll._name);
         });
-        chai.assert.deepEqual(flatten,
-            {
-                'a.b.0.aa.0': 1,
-                'a.b.0.aa.1': 1,
-                'a.b.0.aa.ccc': 1,
-                'a.b.0.bb': 1,
-                'a.b.1.cc': date
-            });
-    });
 
-    it('#rebuild()，可以将扁平化处理后的对象重建还原：', function () {
-        let date = new Date();
-        let obj = MongoHelpers.rebuild({
-            'a.b.0.aa.0': 1,
-            'a.b.0.aa.1': 1,
-            'a.b.0.aa.ccc': 1,
-            'a.b.0.bb': 1,
-            'a.b.1.cc': date
-        });
-        chai.assert.deepEqual(obj,
-            {
+        it('#flatten()，可以将对象扁平化，使其适用于mongo更新操作：', function () {
+            let date = new Date();
+            let flatten = MongoHelpers.flatten({
                 a: {
                     b: [
                         {
@@ -65,202 +32,237 @@ describe('MongoHelpers', function () {
                     ]
                 }
             });
-    });
+            chai.assert.deepEqual(flatten,
+                {
+                    'a.b.0.aa.0': 1,
+                    'a.b.0.aa.1': 1,
+                    'a.b.0.aa.ccc': 1,
+                    'a.b.0.bb': 1,
+                    'a.b.1.cc': date
+                });
+        });
 
-    it('#diffToFlatten()，对比传入的对象，取得差异部分：', function () {
-        let date = new Date();
-        let diff = MongoHelpers.diffToFlatten(
-            {
-                a: {
-                    b: [
-                        {
-                            aa: {
-                                0: 1,
-                                1: 1,
-                                2: null,
-                                ccc: undefined
-                            },
-                            bb: 1
-                        },
-                        {cc: date}
-                    ]
-                }
-            },
-            {
-                a: {
-                    b: {
-                        0: {
-                            aa: {
-                                0: 1,
-                                1: 1,
-                                2: 1,
-                                ccc: 1,
-                                ddd: 2
-                            }
-                        },
-                        1: {cc: date}
+        it('#rebuild()，可以将扁平化处理后的对象重建还原：', function () {
+            let date = new Date();
+            let obj = MongoHelpers.rebuild({
+                'a.b.0.aa.0': 1,
+                'a.b.0.aa.1': 1,
+                'a.b.0.aa.ccc': 1,
+                'a.b.0.bb': 1,
+                'a.b.1.cc': date
+            });
+            chai.assert.deepEqual(obj,
+                {
+                    a: {
+                        b: [
+                            {
+                                aa: {
+                                    0: 1,
+                                    1: 1,
+                                    ccc: 1
+                                },
+                                bb: 1
+                            }, {cc: date}
+                        ]
                     }
-                }
-            },
-            {unsetNonProp: true}
-        );
-        chai.assert.deepEqual({
-            "a.b.0.bb": 1,
-            "a.b.0.aa.2": null,
-            "a.b.0.aa.ccc": undefined,
-            "a.b.0.aa.ddd": undefined
-        }, diff);
-    });
+                });
+        });
 
-    it('#flattenToModifier()，对比传入的对象，取得差异部分来组建mongo更新操作中的setter和unsetter部分：', function () {
-        let date = new Date();
-        let modifier = MongoHelpers.flattenToModifier(
-            {
-                a: {
-                    b: [
-                        {
-                            aa: {
-                                0: 1,
-                                1: 1,
-                                2: null,
-                                ccc: 1
+        it('#diffToFlatten()，对比传入的对象，取得差异部分：', function () {
+            let date = new Date();
+            let diff = MongoHelpers.diffToFlatten(
+                {
+                    a: {
+                        b: [
+                            {
+                                aa: {
+                                    0: 1,
+                                    1: 1,
+                                    2: null,
+                                    ccc: undefined
+                                },
+                                bb: 1
                             },
-                            bb: 1,
-                            cc: [null, 1, '', date, true, false]
-                        },
-                        {cc: date}
-                    ]
-                },
-                b: [1]
-            },
-            {
-                a: {
-                    b: {
-                        0: {
-                            aa: {
-                                0: 1,
-                                1: 1,
-                                2: 1,
-                                ccc: 1
-                            }
-                        },
-                        1: {cc: date},
-                        cc: [null, 1, '', date, true]
+                            {cc: date}
+                        ]
                     }
                 },
-                c: '2'
-            },
-            {unsetNonProp: true}
-        );
-        chai.assert.deepEqual({
-            "$set": {
+                {
+                    a: {
+                        b: {
+                            0: {
+                                aa: {
+                                    0: 1,
+                                    1: 1,
+                                    2: 1,
+                                    ccc: 1,
+                                    ddd: 2
+                                }
+                            },
+                            1: {cc: date}
+                        }
+                    }
+                },
+                {unsetNonProp: true}
+            );
+            chai.assert.deepEqual({
                 "a.b.0.bb": 1,
-                "a.b.0.cc": [null, 1, '', date, true, false],
-                "b": [1]
-            },
-            "$unset": {"a.b.0.aa.2": 1, 'a.b.cc': [null, 1, '', date, true]}
-        }, modifier);
-    });
+                "a.b.0.aa.2": null,
+                "a.b.0.aa.ccc": undefined,
+                "a.b.0.aa.ddd": undefined
+            }, diff);
+        });
 
-    it('#flattenToModifier()，将unsetter中的所有值设置为1：', function () {
-        let date = new Date();
-        let modifier = MongoHelpers.flattenToModifier(
-            {
-                a: {
-                    b: [
-                        {
-                            aa: {
-                                0: 1,
-                                1: 1,
-                                2: null,
-                                ccc: 1
+        it('#flattenToModifier()，对比传入的对象，取得差异部分来组建mongo更新操作中的setter和unsetter部分：', function () {
+            let date = new Date();
+            let modifier = MongoHelpers.flattenToModifier(
+                {
+                    a: {
+                        b: [
+                            {
+                                aa: {
+                                    0: 1,
+                                    1: 1,
+                                    2: null,
+                                    ccc: 1
+                                },
+                                bb: 1,
+                                cc: [null, 1, '', date, true, false]
                             },
-                            bb: 1,
-                            cc: [null, 1, '', date, true, false]
-                        },
-                        {cc: date}
-                    ]
+                            {cc: date}
+                        ]
+                    },
+                    b: [1]
                 },
-                b: [1]
-            },
-            {
-                a: {
-                    b: {
-                        0: {
-                            aa: {
-                                0: 1,
-                                1: 1,
-                                2: 1,
-                                ccc: 1
-                            }
-                        },
-                        1: {cc: date},
-                        cc: [null, 1, '', date, true]
-                    }
+                {
+                    a: {
+                        b: {
+                            0: {
+                                aa: {
+                                    0: 1,
+                                    1: 1,
+                                    2: 1,
+                                    ccc: 1
+                                }
+                            },
+                            1: {cc: date},
+                            cc: [null, 1, '', date, true]
+                        }
+                    },
+                    c: '2'
                 },
-                c: '2'
-            },
-            {unsetAs: 1, unsetNonProp: true}
-        );
-        chai.assert.deepEqual({
-            "$set": {
-                "a.b.0.bb": 1,
-                "a.b.0.cc": [null, 1, '', date, true, false],
-                "b": [1]
-            },
-            "$unset": {"a.b.0.aa.2": 1, 'a.b.cc': 1}
-        }, modifier);
-    });
+                {unsetNonProp: true}
+            );
+            chai.assert.deepEqual({
+                "$set": {
+                    "a.b.0.bb": 1,
+                    "a.b.0.cc": [null, 1, '', date, true, false],
+                    "b": [1]
+                },
+                "$unset": {"a.b.0.aa.2": 1, 'a.b.cc': [null, 1, '', date, true]}
+            }, modifier);
+        });
 
-    it('#flattenToModifier()，可以选择忽略base对象中不存在的属性：', function () {
-        let date = new Date();
-        let modifier = MongoHelpers.flattenToModifier(
-            {
-                a: {
-                    b: [
-                        {
-                            aa: {
-                                0: 1,
-                                1: 1,
-                                2: null,
-                                ccc: 1
+        it('#flattenToModifier()，将unsetter中的所有值设置为1：', function () {
+            let date = new Date();
+            let modifier = MongoHelpers.flattenToModifier(
+                {
+                    a: {
+                        b: [
+                            {
+                                aa: {
+                                    0: 1,
+                                    1: 1,
+                                    2: null,
+                                    ccc: 1
+                                },
+                                bb: 1,
+                                cc: [null, 1, '', date, true, false]
                             },
-                            bb: 1,
-                            cc: [null, 1, '', date, true, false]
-                        },
-                        {cc: date}
-                    ]
+                            {cc: date}
+                        ]
+                    },
+                    b: [1]
                 },
-                b: [1],
-                d: {dd: 1}
-            },
-            {
-                a: {
-                    b: {
-                        0: {
-                            aa: {
-                                0: 1,
-                                1: 1,
-                                2: 1,
-                                ccc: 1
-                            }
-                        },
-                        1: {cc: date},
-                        cc: [null, 1, '', date, true]
-                    }
+                {
+                    a: {
+                        b: {
+                            0: {
+                                aa: {
+                                    0: 1,
+                                    1: 1,
+                                    2: 1,
+                                    ccc: 1
+                                }
+                            },
+                            1: {cc: date},
+                            cc: [null, 1, '', date, true]
+                        }
+                    },
+                    c: '2'
                 },
-                c: '2',
-                d: {dd: 1, ee: 2}
-            },
-            {unsetAs: 1}
-        );
-        chai.assert.deepEqual({
-            "$set": {
-                "a.b.0.bb": 1,
-                "a.b.0.cc": [null, 1, '', date, true, false],
-                "b": [1]
-            },
-            "$unset": {"a.b.0.aa.2": 1}
-        }, modifier);
+                {unsetAs: 1, unsetNonProp: true}
+            );
+            chai.assert.deepEqual({
+                "$set": {
+                    "a.b.0.bb": 1,
+                    "a.b.0.cc": [null, 1, '', date, true, false],
+                    "b": [1]
+                },
+                "$unset": {"a.b.0.aa.2": 1, 'a.b.cc': 1}
+            }, modifier);
+        });
+
+        it('#flattenToModifier()，可以选择忽略base对象中不存在的属性：', function () {
+            let date = new Date();
+            let modifier = MongoHelpers.flattenToModifier(
+                {
+                    a: {
+                        b: [
+                            {
+                                aa: {
+                                    0: 1,
+                                    1: 1,
+                                    2: null,
+                                    ccc: 1
+                                },
+                                bb: 1,
+                                cc: [null, 1, '', date, true, false]
+                            },
+                            {cc: date}
+                        ]
+                    },
+                    b: [1],
+                    d: {dd: 1}
+                },
+                {
+                    a: {
+                        b: {
+                            0: {
+                                aa: {
+                                    0: 1,
+                                    1: 1,
+                                    2: 1,
+                                    ccc: 1
+                                }
+                            },
+                            1: {cc: date},
+                            cc: [null, 1, '', date, true]
+                        }
+                    },
+                    c: '2',
+                    d: {dd: 1, ee: 2}
+                },
+                {unsetAs: 1}
+            );
+            chai.assert.deepEqual({
+                "$set": {
+                    "a.b.0.bb": 1,
+                    "a.b.0.cc": [null, 1, '', date, true, false],
+                    "b": [1]
+                },
+                "$unset": {"a.b.0.aa.2": 1}
+            }, modifier);
+        });
     });
 });
