@@ -17,7 +17,10 @@ if (Meteor.isServer) {
 }
 
 let MongoHelpers = {
-    getCollectionByName (name) {
+    getCollectionByName (name, driverName) {
+        if (driverName) {
+            return collectionMap[name + `[${driverName}]`]
+        }
         return collectionMap[name];
     },
     getCollectionName (Collection) {
@@ -257,7 +260,6 @@ let MongoHelpers = {
 
         while (flag) {
             flag = collection.update(selector, modifier, {multi: true});
-            flag && console.log(JSON.stringify({flag, selector, modifier}));
             count += flag;
             if (isDone(count)) {
                 hasUpdateFailed = false;
